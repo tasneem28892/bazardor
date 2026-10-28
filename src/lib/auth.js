@@ -7,7 +7,7 @@ const db = client.db();
 
 const trustedOrigins = [
   "http://localhost:3000",
-  "https://bazardor-xi.vercel.app",
+  "https://bazardor-umqd.vercel.app",
   process.env.NEXT_PUBLIC_APP_URL,
 ].filter(Boolean);
 
