@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -11,6 +10,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 const BASE_URL = "https://api.abcz.workers.dev/api/bazardor";
 
@@ -79,9 +79,7 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("");
 
-  // Better Auth থেকে বর্তমান user-এর session নেবে
   const { data: session, isPending } = authClient.useSession();
-
   const user = session?.user;
 
   async function handleSignOut() {
@@ -89,14 +87,23 @@ export default function Navbar() {
       const result = await authClient.signOut();
 
       if (result?.error) {
-        console.error("Sign out failed:", result.error);
+        toast.error(
+          result.error.message || "সাইন আউট করা যায়নি।"
+        );
         return;
       }
 
       setProfileOpen(false);
+      toast.success("সফলভাবে সাইন আউট হয়েছে!");
+      routerToHome();
     } catch (error) {
       console.error("Sign out failed:", error);
+      toast.error("সাইন আউট করা যায়নি। আবার চেষ্টা করো।");
     }
+  }
+
+  function routerToHome() {
+    window.location.href = "/";
   }
 
   useEffect(() => {
@@ -145,7 +152,7 @@ export default function Navbar() {
   return (
     <header className="relative z-40 border-t-[3px] border-[#202a23] bg-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        {/* Logo and profile: original Figma layout preserved */}
+        {/* Logo and profile */}
         <div className="flex h-[58px] items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image
@@ -176,9 +183,7 @@ export default function Navbar() {
                   size={15}
                   className="animate-spin"
                 />
-                <span className="text-[11px]">
-                  লোড হচ্ছে
-                </span>
+                <span className="text-[11px]">লোড হচ্ছে</span>
               </div>
             ) : user ? (
               <>
@@ -217,6 +222,17 @@ export default function Navbar() {
                       </p>
                     </div>
 
+                    {/* Profile link */}
+                    <Link
+                      href="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[#26352b] transition hover:bg-[#f1f5ef]"
+                    >
+                      <UserRound size={15} />
+                      আমার প্রোফাইল
+                    </Link>
+
+                    {/* Sign out */}
                     <button
                       type="button"
                       onClick={handleSignOut}
@@ -329,7 +345,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Original scrolling price ticker */}
+      {/* Scrolling price ticker */}
       <div className="overflow-hidden border-y border-[#e9eee9] bg-[#fafcf9]">
         <div className="flex h-[35px] items-center overflow-hidden">
           <div className="ticker-track flex w-max shrink-0 items-center">
