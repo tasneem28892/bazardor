@@ -1,9 +1,9 @@
-
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignUpPage() {
@@ -18,6 +18,14 @@ export default function SignUpPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    if (password.length < 8) {
+      const message = "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -29,16 +37,24 @@ export default function SignUpPage() {
       });
 
       if (result.error) {
-        setError(
-          result.error.message || "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করো।"
-        );
+        const message =
+          result.error.message ||
+          "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করো।";
+
+        setError(message);
+        toast.error(message);
         return;
       }
 
+      toast.success("অ্যাকাউন্ট তৈরি হয়েছে!");
       router.push("/");
       router.refresh();
-    } catch {
-      setError("সমস্যা হয়েছে। MongoDB connection ও server পরীক্ষা করো।");
+    } catch (err) {
+      const message =
+        "অ্যাকাউন্ট তৈরি করা যায়নি। MongoDB connection ও server পরীক্ষা করো।";
+
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -47,7 +63,10 @@ export default function SignUpPage() {
   return (
     <main className="flex min-h-[75vh] items-center justify-center bg-[#f1f5ef] px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-[#e0e8df] bg-white p-6 shadow-sm sm:p-8">
-        <Link href="/" className="text-sm font-semibold text-[#078641]">
+        <Link
+          href="/"
+          className="text-sm font-semibold text-[#078641]"
+        >
           ← বাজার দর-এ ফিরে যাও
         </Link>
 
@@ -55,6 +74,7 @@ export default function SignUpPage() {
           <h1 className="text-2xl font-extrabold text-[#202c23]">
             নতুন অ্যাকাউন্ট তৈরি করো
           </h1>
+
           <p className="mt-2 text-sm text-gray-500">
             বাজারদর জানতে আজই যোগ দাও
           </p>
@@ -62,9 +82,13 @@ export default function SignUpPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#202c23]">
+            <label
+              htmlFor="name"
+              className="mb-1.5 block text-sm font-medium text-[#202c23]"
+            >
               তোমার নাম
             </label>
+
             <input
               id="name"
               type="text"
@@ -78,9 +102,13 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#202c23]">
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-sm font-medium text-[#202c23]"
+            >
               ইমেইল
             </label>
+
             <input
               id="email"
               type="email"
@@ -94,9 +122,13 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#202c23]">
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-sm font-medium text-[#202c23]"
+            >
               পাসওয়ার্ড
             </label>
+
             <input
               id="password"
               type="password"
@@ -111,7 +143,10 @@ export default function SignUpPage() {
           </div>
 
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 p-3 text-sm text-red-600"
+            >
               {error}
             </p>
           )}
@@ -127,7 +162,10 @@ export default function SignUpPage() {
 
         <p className="mt-6 text-center text-sm text-gray-600">
           আগে থেকেই অ্যাকাউন্ট আছে?{" "}
-          <Link href="/signin" className="font-bold text-[#078641] hover:underline">
+          <Link
+            href="/signin"
+            className="font-bold text-[#078641] hover:underline"
+          >
             সাইন ইন করো
           </Link>
         </p>

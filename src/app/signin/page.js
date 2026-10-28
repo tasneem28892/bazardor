@@ -1,9 +1,9 @@
-
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignInPage() {
@@ -28,16 +28,23 @@ export default function SignInPage() {
       });
 
       if (result.error) {
-        setError(
-          result.error.message || "ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।"
-        );
+        const message =
+          result.error.message || "ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।";
+
+        setError(message);
+        toast.error(message);
         return;
       }
 
+      toast.success("সফলভাবে সাইন ইন হয়েছে!");
       router.push("/");
       router.refresh();
-    } catch {
-      setError("সমস্যা হয়েছে। MongoDB connection ও server পরীক্ষা করো।");
+    } catch (err) {
+      const message =
+        "সাইন ইন করা যায়নি। ইন্টারনেট, MongoDB connection ও server পরীক্ষা করো।";
+
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -48,12 +55,24 @@ export default function SignInPage() {
     setGoogleLoading(true);
 
     try {
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: "/",
       });
-    } catch {
-      setError("Google Login করা যায়নি। আবার চেষ্টা করো।");
+
+      if (result?.error) {
+        const message =
+          result.error.message || "Google Login করা যায়নি।";
+
+        setError(message);
+        toast.error(message);
+        setGoogleLoading(false);
+      }
+    } catch (err) {
+      const message = "Google Login করা যায়নি। আবার চেষ্টা করো।";
+
+      setError(message);
+      toast.error(message);
       setGoogleLoading(false);
     }
   }
@@ -61,7 +80,10 @@ export default function SignInPage() {
   return (
     <main className="flex min-h-[75vh] items-center justify-center bg-[#f1f5ef] px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-[#e0e8df] bg-white p-6 shadow-sm sm:p-8">
-        <Link href="/" className="text-sm font-semibold text-[#078641]">
+        <Link
+          href="/"
+          className="text-sm font-semibold text-[#078641]"
+        >
           ← বাজার দর-এ ফিরে যাও
         </Link>
 
@@ -69,6 +91,7 @@ export default function SignInPage() {
           <h1 className="text-2xl font-extrabold text-[#202c23]">
             আবার ফিরে এসেছ!
           </h1>
+
           <p className="mt-2 text-sm text-gray-500">
             তোমার অ্যাকাউন্টে সাইন ইন করো
           </p>
@@ -82,6 +105,7 @@ export default function SignInPage() {
             >
               ইমেইল
             </label>
+
             <input
               id="email"
               type="email"
@@ -101,6 +125,7 @@ export default function SignInPage() {
             >
               পাসওয়ার্ড
             </label>
+
             <input
               id="password"
               type="password"
@@ -160,7 +185,6 @@ export default function SignInPage() {
             <path
               fill="#FBBC05"
               d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.53 10.78l7.99-6.19z"
-              transform="translate(0 0)"
             />
             <path
               fill="#34A853"
