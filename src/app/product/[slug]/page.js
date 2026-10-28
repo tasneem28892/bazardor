@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { ArrowLeft, TrendingUp, MapPin, Package } from "lucide-react";
 
 const BASE_URL = "https://api.abcz.workers.dev/api/bazardor";
@@ -59,6 +60,8 @@ function getName(product) {
 function getPrice(product) {
   return Number(
     product?.today ??
+      product?.todayPrice ??
+      product?.today_price ??
       product?.price ??
       product?.currentPrice ??
       product?.current_price ??
@@ -101,6 +104,8 @@ function getChange(product) {
   return Number(
     product?.changePercent ??
       product?.change_percent ??
+      product?.priceChange ??
+      product?.price_change ??
       change ??
       0
   );
@@ -193,13 +198,11 @@ function getMarketRows(product) {
       "avg",
     ]);
 
-    // API-তে গড় দাম থাকলে সেটি দেখাবে।
-    // না থাকলে সর্বনিম্ন ও সর্বোচ্চ দামের মাঝামাঝি মান দেখাবে।
     const average =
       apiAverage !== null
         ? apiAverage
         : minimum !== null && maximum !== null
-          ? Math.round((minimum + maximum) / 2)
+          ? (minimum + maximum) / 2
           : null;
 
     return {
@@ -324,8 +327,10 @@ function PriceCard({ title, value, color }) {
   );
 }
 
-export default function ProductDetailsPage() {
+function ProductDetailsContent() {
   const params = useParams();
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
 
   const slug = Array.isArray(params?.slug)
     ? params.slug[0]
@@ -336,7 +341,13 @@ export default function ProductDetailsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!slug) return;
+    if (!isPending && !session) {
+      router.replace("/signin");
+    }
+  }, [isPending, session, router]);
+
+  useEffect(() => {
+    if (isPending || !session || !slug) return;
 
     let cancelled = false;
 
@@ -383,7 +394,9 @@ export default function ProductDetailsPage() {
             throw new Error("পণ্যের তথ্য লোড করা যায়নি।");
           }
 
-          const allProducts = getList(await allResponse.json());
+          const allProducts = getList(
+            await allResponse.json()
+          );
 
           result = allProducts.find(
             (item) =>
@@ -417,9 +430,11 @@ export default function ProductDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, isPending, session]);
 
-  if (loading) return <Skeleton />;
+  if (isPending || !session || loading) {
+    return <Skeleton />;
+  }
 
   if (error || !product) {
     return (
@@ -467,8 +482,6 @@ export default function ProductDetailsPage() {
 
   const emoji =
     product?.emoji ||
-    product?.image ||
-    product?.icon ||
     categoryIcons[categorySlug] ||
     "🛒";
 
@@ -622,25 +635,11 @@ export default function ProductDetailsPage() {
               <table className="w-full min-w-[620px] border-collapse text-left text-xs">
                 <thead className="bg-[#fafcf9] text-[#667268]">
                   <tr>
-                    <th className="px-3 py-3 font-semibold">
-                      বাজার
-                    </th>
-
-                    <th className="px-3 py-3 font-semibold">
-                      বিভাগ
-                    </th>
-
-                    <th className="px-3 py-3 text-right font-semibold">
-                      সর্বনিম্ন
-                    </th>
-
-                    <th className="px-3 py-3 text-right font-semibold">
-                      সর্বোচ্চ
-                    </th>
-
-                    <th className="px-3 py-3 text-right font-semibold">
-                      গড়
-                    </th>
+                    <th className="px-3 py-3 font-semibold">বাজার</th>
+                    <th className="px-3 py-3 font-semibold">বিভাগ</th>
+                    <th className="px-3 py-3 text-right font-semibold">সর্বনিম্ন</th>
+                    <th className="px-3 py-3 text-right font-semibold">সর্বোচ্চ</th>
+                    <th className="px-3 py-3 text-right font-semibold">গড়</th>
                   </tr>
                 </thead>
 
@@ -663,15 +662,11 @@ export default function ProductDetailsPage() {
                       </td>
 
                       <td className="px-3 py-3 text-right text-[#344238]">
-                        {row.min !== null
-                          ? `${bn(row.min)} টাকা`
-                          : "—"}
+                        {row.min !== null ? `${bn(row.min)} টাকা` : "—"}
                       </td>
 
                       <td className="px-3 py-3 text-right text-[#344238]">
-                        {row.max !== null
-                          ? `${bn(row.max)} টাকা`
-                          : "—"}
+                        {row.max !== null ? `${bn(row.max)} টাকা` : "—"}
                       </td>
 
                       <td className="px-3 py-3 text-right font-bold text-[#26352b]">
@@ -696,5 +691,13 @@ export default function ProductDetailsPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ProductDetailsPage() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <ProductDetailsContent />
+    </Suspense>
   );
 }

@@ -4,7 +4,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronDown, UserRound } from "lucide-react";
+import {
+  ChevronDown,
+  UserRound,
+  LogOut,
+  LoaderCircle,
+} from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 const BASE_URL = "https://api.abcz.workers.dev/api/bazardor";
 
@@ -33,7 +39,10 @@ function getSlug(item) {
 
 function getPrice(item) {
   return Number(
-    item?.price ??
+    item?.todayPrice ??
+      item?.today_price ??
+      item?.today ??
+      item?.price ??
       item?.currentPrice ??
       item?.current_price ??
       0
@@ -41,12 +50,23 @@ function getPrice(item) {
 }
 
 function getChange(item) {
+  const change = item?.change;
+
+  if (change && typeof change === "object") {
+    const percent = Number(change.pct ?? change.percent ?? 0);
+
+    if (change.dir === "up") return Math.abs(percent);
+    if (change.dir === "down") return -Math.abs(percent);
+
+    return percent;
+  }
+
   return Number(
     item?.changePercent ??
       item?.change_percent ??
       item?.priceChange ??
       item?.price_change ??
-      item?.change ??
+      change ??
       0
   );
 }
@@ -56,7 +76,28 @@ export default function Navbar() {
   const [products, setProducts] = useState([]);
   const [date, setDate] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("");
+
+  // Better Auth থেকে বর্তমান user-এর session নেবে
+  const { data: session, isPending } = authClient.useSession();
+
+  const user = session?.user;
+
+  async function handleSignOut() {
+    try {
+      const result = await authClient.signOut();
+
+      if (result?.error) {
+        console.error("Sign out failed:", result.error);
+        return;
+      }
+
+      setProfileOpen(false);
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  }
 
   useEffect(() => {
     setDate(
@@ -104,7 +145,7 @@ export default function Navbar() {
   return (
     <header className="relative z-40 border-t-[3px] border-[#202a23] bg-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        {/* Logo and profile */}
+        {/* Logo and profile: original Figma layout preserved */}
         <div className="flex h-[58px] items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image
@@ -127,20 +168,92 @@ export default function Navbar() {
             </div>
           </Link>
 
-          <Link
-            href="/signin"
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[#26352b] hover:bg-gray-50"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e7eee8]">
-              <UserRound size={15} />
-            </div>
+          {/* Sign in or signed-in user */}
+          <div className="relative">
+            {isPending ? (
+              <div className="flex items-center gap-1.5 px-2 py-1.5 text-[#26352b]">
+                <LoaderCircle
+                  size={15}
+                  className="animate-spin"
+                />
+                <span className="text-[11px]">
+                  লোড হচ্ছে
+                </span>
+              </div>
+            ) : user ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  aria-expanded={profileOpen}
+                  aria-label="প্রোফাইল মেনু"
+                  className="flex max-w-[190px] items-center gap-1.5 rounded-md px-2 py-1.5 text-[#26352b] transition hover:bg-gray-50"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e7eee8]">
+                    <UserRound size={15} />
+                  </div>
 
-            <span className="text-[11px] font-medium">
-              সাইন ইন
-            </span>
+                  <span className="max-w-[105px] truncate text-[11px] font-medium">
+                    {user.name || user.email || "আমার অ্যাকাউন্ট"}
+                  </span>
 
-            <ChevronDown size={12} />
-          </Link>
+                  <ChevronDown
+                    size={12}
+                    className={`shrink-0 transition ${
+                      profileOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-[#e5ece5] bg-white p-2 shadow-lg">
+                    <div className="border-b border-[#edf1ed] px-3 py-2">
+                      <p className="truncate text-sm font-bold text-[#26352b]">
+                        {user.name || "ব্যবহারকারী"}
+                      </p>
+
+                      <p className="mt-1 truncate text-xs text-gray-500">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                    >
+                      <LogOut size={15} />
+                      সাইন আউট
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href="/signin"
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[#26352b] transition hover:bg-gray-50"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e7eee8]">
+                    <UserRound size={15} />
+                  </div>
+
+                  <span className="text-[11px] font-medium">
+                    সাইন ইন
+                  </span>
+
+                  <ChevronDown size={12} />
+                </Link>
+
+                <Link
+                  href="/signup"
+                  className="rounded-md bg-[#078641] px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-[#066e35]"
+                >
+                  সাইন আপ
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Category navigation */}
@@ -216,7 +329,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Scrolling price ticker */}
+      {/* Original scrolling price ticker */}
       <div className="overflow-hidden border-y border-[#e9eee9] bg-[#fafcf9]">
         <div className="flex h-[35px] items-center overflow-hidden">
           <div className="ticker-track flex w-max shrink-0 items-center">
